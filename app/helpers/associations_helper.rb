@@ -1,4 +1,5 @@
 module AssociationsHelper
+
   def associations_list(id, template_name, existing, options = {})
     empty_text = options.delete(:empty_text) || 'No items'
     options.reverse_merge!(:id => id, 'data-role' => 'seek-associations-list', 'data-template-name' => template_name)
@@ -10,12 +11,12 @@ module AssociationsHelper
     end
   end
 
-  def associations_list_group(id, grouping_attribute, existing, options = {})
+  def associations_list_group(id, grouping_attribute, existing, _options = {})
     content_tag(:div, :id => id, 'data-role' => 'seek-associations-list-group', 'data-grouping-attribute' => grouping_attribute) do
       content_tag(:script, existing.html_safe, :type => 'application/json', 'data-role' => 'seek-existing-associations') +
-      content_tag(:div) do
-        yield
-      end
+        content_tag(:div) do
+          yield
+        end
     end
   end
 
@@ -39,13 +40,13 @@ module AssociationsHelper
     options.reverse_merge!(multiple: false)
     content_tag(:div, class: 'form-group') do
       text_field_tag(nil, nil, class: 'form-control', 'data-role' => 'seek-association-filter',
-                              placeholder: 'Type to filter...',
-                              autocomplete: 'off', 'data-filter-url' => filter_url) +
-      content_tag(:div, class: 'list-group association-candidate-list',
-                  data: { role: 'seek-association-candidate-list',
-                          multiple: options.delete(:multiple) || 'false' }) do
-        yield
-      end
+                               placeholder: 'Type to filter...',
+                               autocomplete: 'off', 'data-filter-url' => filter_url) +
+        content_tag(:div, class: 'list-group association-candidate-list',
+                          data: { role: 'seek-association-candidate-list',
+                                  multiple: options.delete(:multiple) || 'false' }) do
+          yield
+        end
     end
   end
 
@@ -67,8 +68,8 @@ module AssociationsHelper
                direction: { value: aa.direction, text: direction_name(aa.direction) }
       }
       if aa.relationship_type
-        hash.merge!({ relationship_type: { value: aa.relationship_type.id,
-                                           text: aa.relationship_type.title } })
+        hash[:relationship_type] = { value: aa.relationship_type.id,
+                                         text: aa.relationship_type.title }
       end
 
       hash
@@ -83,8 +84,8 @@ module AssociationsHelper
                             text: direction_name(association[:direction]) }
       }
       unless association[:relationship_type].blank?
-        hash.merge!({ relationship_type: { value: association[:relationship_type],
-                                           text: RelationshipType.find_by_id(association[:relationship_type]).try(:title) } })
+        hash.merge!(relationship_type: { value: association[:relationship_type],
+                                         text: RelationshipType.find_by_id(association[:relationship_type]).try(:title) })
       end
 
       hash

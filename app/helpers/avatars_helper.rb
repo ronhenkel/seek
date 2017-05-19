@@ -34,10 +34,10 @@ module AvatarsHelper
 
   def avatar_image_tag_for_item(item, alternative, size, alt, css_class = 'framed')
     case item.class.name.split('::').first.downcase
-      when 'person', 'institution', 'project', 'programme'
-        avatar_according_to_user_upload(alternative, item, size, css_class)
-      else
-        resource_avatar(item, alt: alt, class: css_class, style: "width: #{size}px; height: #{size}px")
+    when 'person', 'institution', 'project', 'programme'
+      avatar_according_to_user_upload(alternative, item, size, css_class)
+    else
+      resource_avatar(item, alt: alt, class: css_class, style: "width: #{size}px; height: #{size}px")
     end
   end
 
@@ -66,7 +66,7 @@ module AvatarsHelper
       if avatar_for_instance.avatars.include?(avatar)
         avatar.public_asset_url(size)
       else
-        fail 'Avatar does not belong to instance'
+        raise 'Avatar does not belong to instance'
       end
     else
       basic_url = eval("#{avatar_for_instance.class.name.downcase}_avatar_path(#{avatar_for_instance.id}, #{avatar_id})")

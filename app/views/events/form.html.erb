@@ -15,14 +15,14 @@
         <%= f.text_area :description, :rows => 5, :class=>"form-control" %>
       </div>
 
-      <div class="form-group date-select">
+      <div class="form-group">
         <%= f.label :start_date %><span class="required">*</span>
-        <%= f.calendar_date_select :start_date, :time => :mixed, :class=>"form-control" %>
+        <%= f.text_field :start_date, data: { calendar: 'mixed' }, class: 'calendar form-control' %>
       </div>
 
-      <div class="form-group date-select">
+      <div class="form-group">
         <%= f.label :end_date %>
-        <%= f.calendar_date_select :end_date, :time => :mixed, :class=>"form-control" %>
+        <%= f.text_field :end_date, data: { calendar: 'mixed' }, class: 'calendar form-control' %>
       </div>
 
       <div class="form-group">
@@ -48,7 +48,7 @@
       <% if current_user_authorized_to_manage -%>
           <%= render :partial => "projects/project_selector", :locals => {:resource => @event, :allow_nil => Seek::Config.is_virtualliver} -%>
 
-          <%= render :seek_partial => "assets/sharing_form" -%>
+          <%= render :seek_partial => "sharing/form" -%>
 
           <%= render :partial => "assets/special_auth_code_form", :locals => {:f => f} if !@event.try(:new_record?)-%>
       <% end %>
@@ -68,7 +68,7 @@
           <%= f.submit button_text, :id => "event_submit_btn",
                        :onclick => "javascript: previewPermissions();return(false);", :class => 'btn btn-primary' -%>
       <% else %>
-          <%= f.submit button_text, :disable_with=>disabled_text, :id => "event_submit_btn",
+          <%= f.submit button_text, data: { disable_with: disabled_text }, :id => "event_submit_btn",
                        :onclick => "javascript: $('event_submit_btn').form.submit();return(false);", :class => 'btn btn-primary' -%>
       <% end %>
       or <%= cancel_button(@event.id ? event_path(@event.id) : events_path) -%>

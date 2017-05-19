@@ -2,7 +2,7 @@ var Wizards = {};
 
 Wizards.Wizard = function (element) {
     this.steps = [];
-    this.currentStep = nil;
+    this.currentStep = null;
     this.element = element;
     this.complete = function () {};
 
@@ -96,7 +96,7 @@ Wizards.Wizard.prototype.updateNav = function () {
 };
 Wizards.Wizard.prototype.reset = function () {
     for(var i = 0; i < this.steps.length; i++)
-        this.steps[i].locked = true;
+        this.steps[i].lock();
 
     this.gotoStep(1);
 };

@@ -9,7 +9,9 @@
 //= require effects
 //= require scriptaculous
 //= require controls
+//= require jquery.ui.all
 //= require bootstrap
+//= require vue/vue
 //= require collapsible_panels
 //= require redbox
 //= require builder
@@ -33,18 +35,18 @@
 //= require fancy_multiselect
 //= require parseuri
 //= require tabber-minimized
+//= require tab_lazy_load
 //= require detect_browser
 //= require easytabs
 //= require favourites
-//= require jquery-ui
-//= require typeahead
+// This is not a mistake:
+//= require typeahead.js.js
 //= require bootstrap-tagsinput
 //= require bootstrap-multiselect
 //= require tags_input
 //= require objects_input
 //= require handlebars.runtime
 //= require handlebars_helpers
-//= require calendar_date_select/calendar_date_select
 //= require zenodo_form
 //= require batch_upload
 //= require bootstrap_tab_memory
@@ -62,4 +64,14 @@
 //= require samples
 //= require jstree
 //= require clipboard
+//= require upload_selection
+//= require openbis
+//= require calendar
+//= require inplace
+//= require strain
+//= require publishing
+//= require cytoscape_isa_graph
+//= require bives
+//= require asset_report
+//= require uri
 //= require_tree ./templates

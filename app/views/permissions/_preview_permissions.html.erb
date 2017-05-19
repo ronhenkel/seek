@@ -28,7 +28,7 @@
 <%
    is_new_file = params[:is_new_file]
    resource_name = params[:resource_name]
-   permissions, privileged_people = uniq_people_permissions_and_privileged_people(policy.permissions, privileged_people)
+   permissions, privileged_people = uniq_people_permissions_and_privileged_people(policy.permissions.to_a, privileged_people)
 %>
 
 <div class="modal fade" id="preview_permissions" tabindex="-1" role="dialog" aria-labelledby="preview_permissions_title" aria-hidden="true">
@@ -39,11 +39,9 @@
         <h4 class="modal-title" id="preview_permissions_title">Preview of your sharing settings</h4>
       </div>
       <div class="modal-body">
-        <% if policy.sharing_scope == Policy::PRIVATE %>
+        <% if policy.access_type == Policy::NO_ACCESS %>
             <%= policy_and_permissions_for_private_scope(permissions, privileged_people, resource_name) %>
-        <% elsif policy.sharing_scope == Policy::ALL_USERS %>
-            <%= policy_and_permissions_for_network_scope(policy, permissions, privileged_people, resource_name) %>
-        <% elsif policy.sharing_scope == Policy::EVERYONE  %>
+        <% else %>
             <%= policy_and_permissions_for_public_scope(policy, permissions, privileged_people, resource_name, updated_can_publish_immediately, send_request_publish_approval) %>
         <% end %>
 

@@ -1,9 +1,9 @@
 <%= folding_panel('Associate authors') do %>
-    Using the form below, you can link the authors listed in PubMed to people registered in SEEK.<br/><br/>
+    Using the form below, you can link the authors to people registered in SEEK.<br/><br/>
 
     SEEK will try and suggest the correct person based on the author's name. If this suggestion is incorrect, please select the correct person from the dropdown menu, or choose "None" if this person isn't a member of SEEK.<br/><br/>
 
-    To reset the author list to the state of the original PubMed article, click the "Disassociate All Authors" button.<br/>
+    To reset the author list to the original state of the PubMed article, click the "Disassociate All Authors" button.<br/>
 
     <div class="row">
       <div class="col-md-6">
@@ -37,7 +37,8 @@
                     <li><%= (link_to get_object_title(creator), show_resource_path(creator)) %></li>
                 <% end %>
               </ul>
-              <%= button_link_to("Disassociate All Authors", 'destroy', disassociate_authors_publication_url(publication), {:confirm => "This will reset the publication's links to people in SEEK, are you sure you wish to do this?", :method => :post}) -%>
+              <%= button_link_to("Disassociate All Authors", 'destroy', disassociate_authors_publication_url(publication),
+                                 { data: { confirm: "This will reset the publication's links to people in SEEK, are you sure you wish to do this?" }, :method => :post}) -%>
           <% else %>
               <span class="none_text">No associated authors</span>
           <% end %>

@@ -35,12 +35,12 @@
                             :help_text => "These are details you will need if you have created and wish to use a <b>JERM harvester</b> for this project, to register assets from a remote site.") do %>
               <%= render :partial=>"jerm_details",:locals=>{:f=>f} %>
               <br/>
-              <%= render :partial=>"assets/sharing_form"%>
+              <%= render partial: 'sharing/form', locals: { policy: (@project.default_policy || Policy.default) } %>
           <% end %>
     <% end %>
 
     <p>
-      <%= f.submit("Update", :disable_with=>"Updating...", :onclick => "updateInstitutionIds();") -%>
+      <%= f.submit("Update", data: { disable_with: 'Updating...' }, :onclick => "updateInstitutionIds();") -%>
       or <%= cancel_button(project_path(@project.id)) %>
     </p>
 
