@@ -107,7 +107,7 @@ class AssaysController < ApplicationController
 
     update_assay_organisms @assay, params
 
-    @assay.owner=current_person
+    @assay.contributor=current_person
 
     update_sharing_policies @assay
 
@@ -208,10 +208,13 @@ class AssaysController < ApplicationController
   end
 
   def show
+    options = {:is_collection=>false}
     respond_to do |format|
       format.html
       format.xml
       format.rdf { render :template=>'rdf/show'}
+      format.json {render json: JSONAPI::Serializer.serialize(@assay,options)}
+
     end
   end
 

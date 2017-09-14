@@ -14,7 +14,6 @@ class Person < ActiveRecord::Base
   before_destroy :clean_up_and_assign_permissions
 
   acts_as_notifiee
-  acts_as_annotatable name_field: :name
 
   validates_presence_of :email
 
@@ -44,7 +43,7 @@ class Person < ActiveRecord::Base
   has_many :favourite_groups, through: :favourite_group_memberships
 
   has_many :studies_for_person, as: :contributor, class_name: 'Study'
-  has_many :assays_for_person, foreign_key: :owner_id, class_name: 'Assay'
+  has_many :assays_for_person, foreign_key: :contributor_id, class_name: 'Assay'
   alias assays assays_for_person
   has_many :investigations_for_person, as: :contributor, class_name: 'Investigation'
 
@@ -472,11 +471,27 @@ class Person < ActiveRecord::Base
     group_memberships << membership
   end
 
+#   def json_api_attrs (options = {})
+#     attrs = []
+#     attrs += %w(title id first_name last_name description phone email skype_name web_page) # if %i(user admin).include?options[:access_level]
+# #    attrs += %w(real_price in_stock) if options[:access_level] == :admin
+#     attrs
+#   end
+#
+#   def json_api_relations (options = {})
+#      ## TO DO: Why don't data files and other asset types work here? a person can have data files...
+#       %w(avatar assays institutions investigations presentations projects studies ) #get_related_resources(self))
+#   end
+#
+#   def json_api_meta (options = {})
+#     { uuid: self.uuid, created: self.created_at, modified: self.updated_at }
+#   end
+
   private
 
   # a before_save trigger, that checks if the person is the first one created, and if so defines it as admin
   def first_person_admin_and_add_to_default_project
-    if Person.count == 0
+    if Person.count.zero?
       self.is_admin = true
       project = Project.first
       if project && project.institutions.any?

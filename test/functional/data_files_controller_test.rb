@@ -26,7 +26,13 @@ class DataFilesControllerTest < ActionController::TestCase
   def test_title
     get :index
     assert_response :success
-    assert_select 'title', text: /The Sysmo SEEK Data.*/, count: 1
+    assert_select 'title', text: 'Data files', count: 1
+
+    df = Factory(:data_file,contributor:User.current_user.person)
+    get :show, id:df
+    assert_response :success
+    assert_select 'title', text: df.title, count: 1
+
   end
 
   # because the activity logging is currently an after_filter, the AuthorizationEnforcement can silently prevent
@@ -1739,10 +1745,10 @@ class DataFilesControllerTest < ActionController::TestCase
     get :show, id: df, format: 'json'
     assert_response :success
     json = JSON.parse(response.body)
-    assert_equal df.id, json['id']
-    assert_equal 'fish flop', json['title']
-    assert_equal 'testing json description', json['description']
-    assert_equal df.version, json['version']
+    assert_equal df.id, json['data']['id'].to_i
+    assert_equal 'fish flop', json['data']['attributes']['title']
+    assert_equal 'testing json description', json['data']['attributes']['description']
+    assert_equal df.version, json['data']['attributes']['version']
   end
 
   test 'landing page for hidden item' do
@@ -2036,6 +2042,52 @@ class DataFilesControllerTest < ActionController::TestCase
     assert_equal 'text/plain', blob.content_type
     assert_equal 5000, blob.file_size
     assert blob.caching_job.exists?
+  end
+
+  test "should create data file for remote URL with a space at the end" do
+    mock_http
+    params = { data_file: {
+        title: 'Remote File',
+        project_ids: [projects(:sysmo_project).id]
+    },
+               content_blobs: [{
+                                   data_url: 'http://mockedlocation.com/txt_test.txt ',
+                                   make_local_copy: '1'
+                               }],
+               policy_attributes: valid_sharing
+    }
+
+    assert_difference('DataFile.count') do
+      assert_difference('ContentBlob.count') do
+        post :create, params
+      end
+    end
+
+    assert_redirected_to data_file_path(assigns(:data_file))
+    assert_equal 'http://mockedlocation.com/txt_test.txt', assigns(:data_file).content_blob.url
+  end
+
+  test "should create data file for remote URL with no scheme" do
+    mock_http
+    params = { data_file: {
+        title: 'Remote File',
+        project_ids: [projects(:sysmo_project).id]
+    },
+               content_blobs: [{
+                                   data_url: 'mockedlocation.com/txt_test.txt',
+                                   make_local_copy: '1'
+                               }],
+               policy_attributes: valid_sharing
+    }
+
+    assert_difference('DataFile.count') do
+      assert_difference('ContentBlob.count') do
+        post :create, params
+      end
+    end
+
+    assert_redirected_to data_file_path(assigns(:data_file))
+    assert_equal 'http://mockedlocation.com/txt_test.txt', assigns(:data_file).content_blob.url
   end
 
   test 'should display null license text' do
@@ -2506,6 +2558,49 @@ class DataFilesControllerTest < ActionController::TestCase
     assert_template :new
   end
 
+  test 'should download jerm thing' do
+    mock_http
+    data_file = Factory(:jerm_data_file,
+                        content_blob: Factory(:txt_content_blob, url: 'http://project.jerm/file.txt', data: 'jkl'),
+                        policy: Factory(:public_policy))
+    get :download, id: data_file
+    assert_equal 'abc', @response.body
+    assert_response :success
+  end
+
+  test 'should download jerm thing that throws 404 if a local copy is present' do
+    mock_http
+    data_file = Factory(:jerm_data_file,
+                        content_blob: Factory(:txt_content_blob, url: 'http://mocked404.com', data: 'xyz'),
+                        policy: Factory(:public_policy))
+    get :download, id: data_file
+    assert_equal 'xyz', @response.body
+    assert_response :success
+  end
+
+  test 'should not download jerm thing that has gone if a local copy is present' do
+    mock_http
+    data_file = Factory(:jerm_data_file,
+                        content_blob: Factory(:txt_content_blob, url: 'http://gone-project.jerm/file.txt', data: 'qwe'),
+                        policy: Factory(:public_policy))
+    get :download, id: data_file
+    assert_equal 'qwe', @response.body
+    assert_response :success
+  end
+
+  test 'should unset policy sharing scope when updated' do
+    login_as(:datafile_owner)
+    df = data_files(:editable_data_file)
+    df.policy.update_column(:sharing_scope, Policy::ALL_USERS)
+
+    assert_equal df.reload.policy.sharing_scope, Policy::ALL_USERS
+
+    put :update, id: df, data_file: { title: df.title }, policy_attributes: projects_policy(Policy::ACCESSIBLE, df.projects, Policy::EDITING)
+
+    assert_redirected_to data_file_path(df)
+    assert_nil df.reload.policy.sharing_scope
+  end
+
   private
 
   def data_file_with_extracted_samples(contributor = User.current_user)
@@ -2557,6 +2652,12 @@ class DataFilesControllerTest < ActionController::TestCase
 
     stub_request(:get, 'http://mockedlocation.com/nohead.txt').to_return(body: 'bananafish' * 500, status: 200, headers: { content_type: 'text/plain; charset=UTF-8', content_length: 5000 })
     stub_request(:head, 'http://mockedlocation.com/nohead.txt').to_return(status: 405)
+
+    stub_request(:get, 'http://project.jerm/file.txt').to_return(body: 'abc', status: 200, headers: { 'Content-Type' => 'text/plain; charset=UTF-8' })
+    stub_request(:head, 'http://project.jerm/file.txt').to_return(status: 200, headers: { content_type: 'text/plain; charset=UTF-8' })
+
+    stub_request(:get, 'http://gone-project.jerm/file.txt').to_raise(SocketError)
+    stub_request(:head, 'http://gone-project.jerm/file.txt').to_raise(SocketError)
   end
 
   def mock_https

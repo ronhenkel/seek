@@ -3,7 +3,6 @@
 class PublicationsController < ApplicationController
   include Seek::IndexPager
   include Seek::AssetsCommon
-  include Seek::BioExtension
   include Seek::PreviewHandling
 
   before_filter :publications_enabled?
@@ -38,11 +37,13 @@ class PublicationsController < ApplicationController
   # GET /publications/1
   # GET /publications/1.xml
   def show
+    options = {:is_collection=>false}
     respond_to do |format|
       format.html # show.html.erb
       format.xml
       format.rdf { render template: 'rdf/show' }
-      format.any(*Publication::EXPORT_TYPES.keys) { send_data @publication.export(request.format.to_sym), type: request.format.to_sym, filename: "#{@publication.title}.#{request.format.to_sym}" }
+      format.json {render json: JSONAPI::Serializer.serialize(@publication,options)}
+      format.any( *Publication::EXPORT_TYPES.keys ) { send_data @publication.export(request.format.to_sym), type: request.format.to_sym, filename: "#{@publication.title}.#{request.format.to_sym}" }
     end
   end
 
@@ -326,6 +327,7 @@ class PublicationsController < ApplicationController
         result = Bio::MEDLINE.new(Bio::PubMed.efetch(pubmed_id).first).reference
         @error = result.error
       rescue => exception
+        raise exception unless Rails.env.production?
         result ||= Bio::Reference.new({})
         @error = 'There was a problem contacting the PubMed query service. Please try again later'
         if Seek::Config.exception_notification_enabled

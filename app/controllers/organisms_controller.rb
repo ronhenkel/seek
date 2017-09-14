@@ -18,21 +18,25 @@ class OrganismsController < ApplicationController
   include Seek::BreadCrumbs
 
   def show
+    options = {:is_collection=>false}
     respond_to do |format|
       format.html
       format.xml
       format.rdf { render :template=>'rdf/show'}
+      format.json {render json: JSONAPI::Serializer.serialize(@organism,options)}
     end
   end
 
   def index
-    @organisms = Organism.order('title ASC')
+    @organisms = Organism.order('title ASC').to_a
 
     if request.format.symbol == :html
       super
     else
+      options = {:is_collection=>true}
       respond_to do |format|
         format.xml
+        format.json {render json: JSONAPI::Serializer.serialize(@organisms, options)}
       end
     end
   end

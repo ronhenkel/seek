@@ -189,10 +189,12 @@ end
 
 Factory.define(:all_sysmo_viewable_policy, parent: :policy) do |f|
   f.access_type Policy::VISIBLE
+  f.sharing_scope Policy::ALL_USERS
 end
 
 Factory.define(:all_sysmo_downloadable_policy, parent: :policy) do |f|
   f.access_type Policy::ACCESSIBLE
+  f.sharing_scope Policy::ALL_USERS
 end
 
 Factory.define(:publicly_viewable_policy, parent: :policy) do |f|
@@ -352,6 +354,11 @@ end
 
 Factory.define(:strain_sample_data_file, parent: :data_file) do |f|
   f.association :content_blob, factory: :strain_sample_data_content_blob
+end
+
+Factory.define(:jerm_data_file, parent: :data_file) do |f|
+  f.contributor nil
+  f.association :content_blob, factory: :url_content_blob
 end
 
 # Model
