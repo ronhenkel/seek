@@ -1,0 +1,6 @@
+name: MaSyMoS
+adaptor_class_name: Seek::MasymosSearch::SearchMasymosAdaptor
+search_type: models
+enabled: true
+legal: "Please retain original author attributes"
+partial_path: "lib/seek/masymos_search/_masymos_resource_list_item.html.erb"
