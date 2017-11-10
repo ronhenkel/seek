@@ -1,3 +1,6 @@
+# Masymos adapter definition
+# Ron Henkel
+# 06.11.2017
 name: MaSyMoS
 adaptor_class_name: Seek::MasymosSearch::SearchMasymosAdaptor
 search_type: models

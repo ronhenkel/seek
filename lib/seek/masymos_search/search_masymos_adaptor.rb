@@ -1,3 +1,6 @@
+# Masymos search adaptor
+# Ron Henkel
+# 06.11.2017
 require 'search_biomodel'
 
 module Seek
