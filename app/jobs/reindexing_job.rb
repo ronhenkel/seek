@@ -6,19 +6,11 @@ class ReindexingJob < SeekJob
   def perform_job(item)
 
     if item.respond_to?(:content_blobs) || item.respond_to?(:content_blob)
-      puts "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Selecting blobs..."
       blobs = item.respond_to?(:content_blobs) ? item.content_blobs: [item.content_blob]
-      "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! BLOB size:"
-      puts blobs.size
       blobs.each do |blob|
         if blob.content_type == "text/xml"
           add_to_masymos(item)
         end
-        puts "!!!!!!!!!Blob: #{blob}"
-        puts blob.content_type
-        path = polymorphic_path(blob, action: :download)
-        puts "!!!!!!!!!!!!!Path: #{path}"
-
       end
     end
 
@@ -52,6 +44,17 @@ class ReindexingJob < SeekJob
 
         path = polymorphic_path(item, action: :download)
         puts "!!!!!!!!!!!!!Path: #{path}"
+        download_url = "http://localhost:3000#{path}"
+        puts "!!!!!!!!!!!!!URL: #{download_url}"
+        uri = URI('http://localhost:7474/morre/model_update_service/add_model/')
+        req = Net::HTTP::Post.new(uri, 'Content-Type' => 'application/json')
+        #req.body = {fileId: "aa", url:item.model_version_url, modelType:"SBML"}.to_json
+        req.body = {fileId: download_url, url:download_url, modelType:'SBML'}.to_json
+        puts "!!!!!!!!!!!!!Path: #{uri.to_json}"
+        puts "!!!!!!!!!!!!!Request: #{req.to_json}"
+        puts "!!!!!!!!!!!!!Body: #{req.body}"
+
+
         #add_to_masymos(item)
         ReindexingQueue.create item: item
       end
@@ -60,17 +63,17 @@ class ReindexingJob < SeekJob
   end
 
   def add_to_masymos(item)
-    #puts "!!!!!!!!!!!!!!!!!!!!!!!Starting Add Model MasyMos"
-    #puts "Item: #{item.to_json}"
     path = polymorphic_path(item, action: :download)
-    download_url = "http://139.30.96.45:3000"+path
-    uri = URI('http://139.30.4.72:7474/morre/model_update_service/add_model/')
+    download_url = "http://localhost:3000#{path}"
+    uri = URI('http://localhost:7474/morre/model_update_service/add_model/')
     req = Net::HTTP::Post.new(uri, 'Content-Type' => 'application/json')
     #req.body = {fileId: "aa", url:item.model_version_url, modelType:"SBML"}.to_json
-    req.body = {fileId: download_url, url:"http://www.ebi.ac.uk/biomodels-main/download?mid=BIOMD0000000005", modelType:"SBML"}.to_json
+    req.body = {fileId: download_url, url:download_url, modelType:'SBML'}.to_json
     res = Net::HTTP.start(uri.hostname, uri.port) do |http|
       http.request(req)
     end
+    #masymos_json_result = JSON.load `curl -X POST http://localhost:7474/morre/model_update_service/add_model -H 'Content-Type: application/json' -d '{"fileId":"http://localhost:3000/models/22/download","url":"http://localhost:3000/models/22/download","modelType":"SBML"}'`
+    #IO.write('/home/x.txt',res.body.to_json)
     #masymos_json_result = JSON.parse(res.body)
     #puts "!!!!!!!!!!!!!!!!!!!!!!!Response: #{masymos_json_result}"
   end
