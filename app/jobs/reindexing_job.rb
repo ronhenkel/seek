@@ -48,12 +48,12 @@ class ReindexingJob < SeekJob
 
   def add_to_masymos(item)
     path = polymorphic_path(item, action: :download)
-    download_url = "http://localhost:3000#{path}"
+    download_url = Seek::Config.site_base_host + path
     file_url = download_url
     if download_url.include?('download')
       file_url = download_url.slice(0..(download_url.index('download')-1))
     end
-    uri = URI('http://localhost:7474/morre/model_update_service/add_model/')
+    uri = URI.join(Seek::Config.masymos_url, 'model_update_service/add_model/')
     req = Net::HTTP::Post.new(uri, 'Content-Type' => 'application/json')
     req.body = {fileId: file_url, url:download_url, modelType:'SBML'}.to_json
     res = Net::HTTP.start(uri.hostname, uri.port) do |http|
@@ -62,7 +62,7 @@ class ReindexingJob < SeekJob
   end
 
   def create_masymos_annotation_index(drop_existing, time = default_delay.from_now, priority = default_priority)
-    uri = URI('http://localhost:7474/morre/model_update_service/create_annotation_index/')
+    uri = URI.join(Seek::Config.masymos_url, 'model_update_service/create_annotation_index/')
     req = Net::HTTP::Post.new(uri, 'Content-Type' => 'application/json')
     req.body = {dropExistingIndex:drop_existing}.to_json
     res = Net::HTTP.start(uri.hostname, uri.port) do |http|
@@ -72,16 +72,12 @@ class ReindexingJob < SeekJob
 
 
   def delete_from_masymos(item)
-    puts "!!!!!!!!!!!!!!!!!!!!!!!Starting delete Model MasyMos"
-    puts "Item: #{item.to_json}"
-    uri = URI('http://139.30.4.72:7474/morre/model_update_service/delete_model/')
+    uri = URI.join(Seek::Config.masymos_url, '/model_update_service/delete_model/')
     req = Net::HTTP::Post.new(uri, 'Content-Type' => 'application/json')
-    #req.body = {fileID: "aa", url:item.model_version_url, modelType:"SBML"}.to_json
-    req.body = {url:"http://www.ebi.ac.uk/biomodels-main/download?mid=BIOMD0000000005", uuID:"00000"}.to_json
+    req.body = {uuID:"0"}.to_json
     res = Net::HTTP.start(uri.hostname, uri.port) do |http|
       http.request(req)
     end
     masymos_json_result = JSON.parse(res.body)
-    puts "!!!!!!!!!!!!!!!!!!!!!!!Response: #{masymos_json_result}"
   end
 end

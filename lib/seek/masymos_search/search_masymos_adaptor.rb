@@ -8,10 +8,10 @@ module Seek
     class SearchMasymosAdaptor < AbstractSearchAdaptor
       def perform_search(query)
         Rails.cache.clear #DEV only
-        yaml = Rails.cache.fetch("masymos_search_#{URI.encode(query)}", expires_in: 1.second) do
+        yaml = Rails.cache.fetch("masymos_search_#{URI.encode(query)}", expires_in: 1.hour) do
           #masymos_json_result = JSON.load `curl -X POST http://139.30.4.72:7474/morre/query/model_query/ -H 'Content-Type: application/json' -d '{"keyword":"cell"}'`
 
-          uri = URI('http://localhost:7474/morre/query/model_query/')
+          uri = URI.join(Seek::Config.masymos_url, 'query/model_query/')
           req = Net::HTTP::Post.new(uri, 'Content-Type' => 'application/json')
           req.body = {keyword: query}.to_json
           res = Net::HTTP.start(uri.hostname, uri.port) do |http|
