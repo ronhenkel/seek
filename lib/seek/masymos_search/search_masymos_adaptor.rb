@@ -19,19 +19,20 @@ module Seek
           end
 
           masymos_json_result = JSON.parse(res.body)
-#          puts "!!!!!!!!!!!!!!!!!!!!!!!Body for Query #{query}"
-#          puts masymos_json_result
+          puts "!!!!!!!!!!!!!!!!!!!!!!!Body for Query #{query}"
+          puts "!!!!!!!!!!!!!!!!!!!!!!!Body for Req #{req.body}"
+          puts masymos_json_result
           masymos_search_results = masymos_json_result.each do |result|
             !(result.nil?)
           end
 
          results = masymos_search_results.collect do |result|
-            r = MasymosSearchResult.new(result["modelName"], result["modelID"],
-                                      result["documentID"], result["filename"])
+           r = MasymosSearchResult.new(result["modelName"], result["modelID"],
+                                      result["documentID"], result["filename"]) unless result["modelName"].nil?
 
 
-          end.compact
-          results.to_yaml
+         end.compact
+         results.to_yaml
         end
         YAML.load(yaml)
 

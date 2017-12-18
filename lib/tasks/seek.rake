@@ -216,8 +216,9 @@ namespace :seek do
   desc "Creates background jobs to reindex all searchable things"
   task(:reindex_all=>:environment) do
     Seek::Util.searchable_types.each do |type|
-      ReindexingJob.new.add_items_to_queue type.all, 5.seconds.from_now,2
+      ReindexingJob.new.add_items_to_queue type.all, 2.seconds.from_now,2
     end
+    #ReindexingJob.new.create_masymos_annotation_index true, 2.hours.from_now, 2
   end
 
   desc "Initialize background jobs for sending subscription periodic emails"
