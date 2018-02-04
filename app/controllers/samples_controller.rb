@@ -11,17 +11,21 @@ class SamplesController < ApplicationController
   before_filter :auth_to_create, only: [:new, :create]
 
   include Seek::IsaGraphExtensions
+  include Seek::BreadCrumbs
 
   def index
-    options = {:is_collection=>true}
+    # There must be better ways of coding this
     if @data_file || @sample_type
       respond_to do |format|
         format.html
-        format.json {render json: JSONAPI::Serializer.serialize(@samples,options)}
+        format.json {render json: :not_implemented, status: :not_implemented }
       end
       #respond_with(@samples)
     else
-      super
+      respond_to do |format|
+        format.html {super}
+        format.json {render json: :not_implemented, status: :not_implemented }
+      end
     end
   end
 
@@ -42,11 +46,10 @@ class SamplesController < ApplicationController
   end
 
   def show
-    options = {:is_collection=>false}
     @sample = Sample.find(params[:id])
     respond_to do |format|
       format.html
-      format.json {render json: JSONAPI::Serializer.serialize(@sample,options)}
+      format.json {render json: :not_implemented, status: :not_implemented }
     end
   end
 

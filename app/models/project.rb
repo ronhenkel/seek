@@ -16,12 +16,10 @@ class Project < ActiveRecord::Base
   has_and_belongs_to_many :publications
   has_and_belongs_to_many :events
   has_and_belongs_to_many :presentations
-  has_and_belongs_to_many :taverna_player_runs, class_name: 'TavernaPlayer::Run',
-                                                join_table: 'projects_taverna_player_runs', association_foreign_key: 'run_id'
-
   has_and_belongs_to_many :strains
   has_and_belongs_to_many :samples
   has_and_belongs_to_many :sample_types
+  has_and_belongs_to_many :documents
 
   has_many :work_groups, dependent: :destroy, inverse_of: :project
   has_many :institutions, through: :work_groups, before_remove: :group_memberships_empty?, inverse_of: :projects
@@ -73,6 +71,8 @@ class Project < ActiveRecord::Base
   #  is to be used)
   belongs_to :default_policy, class_name: 'Policy', dependent: :destroy, autosave: true
 
+  has_many :settings, class_name: 'Settings', as: :target, dependent: :destroy
+
   def group_memberships_empty?(institution)
     work_group = WorkGroup.where(['project_id=? AND institution_id=?', id, institution.id]).first
     unless work_group.people.empty?
@@ -92,7 +92,7 @@ class Project < ActiveRecord::Base
   before_save :set_credentials
 
   def assets
-    data_files | sops | models | publications | presentations
+    data_files | sops | models | publications | presentations | documents
   end
 
   def institutions=(new_institutions)
@@ -275,7 +275,7 @@ class Project < ActiveRecord::Base
   def total_asset_size
     assets.sum do |asset|
       if asset.respond_to?(:content_blob)
-        asset.content_blob.file_size || 0
+        asset.content_blob.try(:file_size) || 0
       elsif asset.respond_to?(:content_blobs)
         asset.content_blobs.to_a.sum do |blob|
           blob.file_size || 0
@@ -284,6 +284,14 @@ class Project < ActiveRecord::Base
         0
       end
     end
+  end
+
+  # whether the user is able to request membership of this project
+  def allow_request_membership?(user = User.current_user)
+    user.present? &&
+        project_administrators.any? &&
+        !has_member?(user) &&
+        MessageLog.recent_project_membership_requests(user.try(:person),self).empty?
   end
 
   # should put below at the bottom in order to override methods for hierarchies,

@@ -39,12 +39,13 @@ class Assay < ActiveRecord::Base
   has_many :sops, through: :assay_assets, source: :asset, source_type: 'Sop'
   has_many :models, through: :assay_assets, source: :asset, source_type: 'Model'
   has_many :samples, through: :assay_assets, source: :asset, source_type: 'Sample'
+  has_many :documents, through: :assay_assets, source: :asset, source_type: 'Document'
 
   has_one :investigation, through: :study
 
   validates_presence_of :assay_type_uri
   validates_presence_of :technology_type_uri, unless: :is_modelling?
-  validates_presence_of :study, message: ' must be selected'
+  validates_presence_of :study, message: ' must be selected and valid'
   validates_presence_of :contributor
   validates_presence_of :assay_class
 
@@ -110,7 +111,27 @@ class Assay < ActiveRecord::Base
   end
 
   def assets
-    data_files + models + sops + publications + samples
+    data_files + models + sops + publications + samples + documents
+  end
+
+  def incoming
+    assay_assets.incoming.collect(&:asset)
+  end
+
+  def outgoing
+    assay_assets.outgoing.collect(&:asset)
+  end
+
+  def validation_assets
+    assay_assets.validation.collect(&:asset)
+  end
+
+  def construction_assets
+    assay_assets.construction.collect(&:asset)
+  end
+
+  def simulation_assets
+    assay_assets.simulation.collect(&:asset)
   end
 
   def avatar_key
@@ -161,5 +182,10 @@ class Assay < ActiveRecord::Base
       end
     end
     assay_organism.tissue_and_cell_type = tissue_and_cell_type
+  end
+
+  # overides that from Seek::RDF::RdfGeneration, as Assay entity depends upon the AssayClass (modelling, or experimental) of the Assay
+  def rdf_type_entity_fragment
+    { 'EXP' => 'Experimental_assay', 'MODEL' => 'Modelling_analysis' }[assay_class.key]
   end
 end

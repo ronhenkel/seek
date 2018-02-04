@@ -281,19 +281,10 @@ module ApiHelper
   end
 
   def associated_resources(object)
-    associated_arr = []
     associated_hash = get_related_resources(object)
     to_ignore = ignore_associated_types.collect(&:name)
     associated_hash.delete_if { |k, _v| to_ignore.include?(k) }
-    associated_hash.each_value do |value|
-      if (value[:items] != [])
-        #puts "a value: ", value[:items]
-        associated_arr += value[:items]
-#        builder.api_format! value[:items]   #if we used a jbuilder
-
-      end
-    end
-    associated_arr
+    associated_hash
   end
 
   def associated_resources_xml(builder, object)
@@ -316,7 +307,7 @@ module ApiHelper
 
   # types that should be ignored from the related resources. It may be desirable to add items in this list to the schema
   def ignore_associated_types
-    [Strain, TavernaPlayer::Run, Workflow, Sweep]
+    [Strain]
   end
 
   def generic_list_xml(builder, list, tag, attr = {})
@@ -389,4 +380,7 @@ module ApiHelper
       end
     end
   end
+
+
+
 end

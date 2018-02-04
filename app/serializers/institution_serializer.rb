@@ -2,8 +2,10 @@ class InstitutionSerializer < AvatarObjSerializer
   attributes :title,
              :country, :city, :address,
              :web_page
-end
 
+  has_many :people
+  has_many :projects
+end
 
 # using active_model_serializer - if we switch to RAILS >= 4
 # class InstitutionSerializer < ActiveModel::Serializer

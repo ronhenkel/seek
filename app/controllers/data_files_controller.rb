@@ -6,6 +6,7 @@ class DataFilesController < ApplicationController
   include Seek::IndexPager
   include SysMODB::SpreadsheetExtractor
   include MimeTypesHelper
+  include ApiHelper
 
   include Seek::AssetsCommon
 
@@ -16,14 +17,18 @@ class DataFilesController < ApplicationController
   before_filter :xml_login_only, only: [:upload_for_tool, :upload_from_email]
   before_filter :get_sample_type, only: :extract_samples
   before_filter :check_already_extracted, only: :extract_samples
-  before_filter :forbid_new_version_if_samples, :only => :new_version	
+  before_filter :forbid_new_version_if_samples, :only => :new_version
+
+  before_filter :oauth_client, only: :retrieve_nels_sample_metadata
+  before_filter :nels_oauth_session, only: :retrieve_nels_sample_metadata
+  before_filter :rest_client, only: :retrieve_nels_sample_metadata
 
   # has to come after the other filters
   include Seek::Publishing::PublishingCommon
 
   include Seek::BreadCrumbs
 
-  include Seek::DataciteDoi
+  include Seek::Doi::Minting
 
   include Seek::IsaGraphExtensions
 
@@ -61,6 +66,7 @@ class DataFilesController < ApplicationController
       respond_to do |format|
         if @data_file.save_as_new_version(comments)
           create_content_blobs
+
           # Duplicate studied factors
           factors = @data_file.find_version(@data_file.version - 1).studied_factors
           factors.each do |f|
@@ -135,7 +141,14 @@ class DataFilesController < ApplicationController
   end
 
   def create
-    @data_file = DataFile.new(data_file_params)
+    if params[:data_file].empty? && !params[:datafile].empty?
+      params[:data_file] = params[:datafile]
+    end
+
+     if params.key?(:content)
+        params[:content_blobs] = params[:content]["data"] #Why a string?
+     end
+      @data_file = DataFile.new(data_file_params.except!(:content))
 
     if handle_upload_data
       update_sharing_policies(@data_file)
@@ -166,6 +179,7 @@ class DataFilesController < ApplicationController
             assay_ids, relationship_types = determine_related_assay_ids_and_relationship_types(params)
             update_assay_assets(@data_file, assay_ids, relationship_types)
             format.html { redirect_to data_file_path(@data_file) }
+            format.json { render json: @data_file}
           end
       end
       else
@@ -173,6 +187,7 @@ class DataFilesController < ApplicationController
           format.html do
             render action: 'new'
           end
+          format.json {render json: "{}" } #fix
         end
 
       end
@@ -193,7 +208,11 @@ class DataFilesController < ApplicationController
   end
 
   def update
-    @data_file.attributes = data_file_params
+
+    if params[:data_file].empty? && !params[:datafile].empty?
+      params[:data_file] = params[:datafile]
+    end
+    @data_file.attributes = data_file_params.except!(:content)
 
     update_annotations(params[:tag_list], @data_file)
     update_scales @data_file
@@ -210,11 +229,12 @@ class DataFilesController < ApplicationController
 
         flash[:notice] = "#{t('data_file')} metadata was successfully updated."
         format.html { redirect_to data_file_path(@data_file) }
-
+        format.json {render json: @data_file}
       else
         format.html do
           render action: 'edit'
         end
+        format.json {} #to be decided
       end
     end
   end
@@ -269,14 +289,13 @@ class DataFilesController < ApplicationController
   end
 
   def filter
-    if params[:with_samples]
-      scope = DataFile.with_extracted_samples
-    else
-      scope = DataFile
-    end
+    scope = DataFile
+    scope = scope.joins(:projects).where(projects: { id: current_user.person.projects }) unless (params[:all_projects] == 'true')
+    scope = scope.where(simulation_data: true) if (params[:simulation_data] == 'true')
+    scope = scope.with_extracted_samples if (params[:with_samples] == 'true')
 
     @data_files = DataFile.authorize_asset_collection(
-      scope.where('data_files.title LIKE ?', "#{params[:filter]}%"), 'view'
+      scope.where('data_files.title LIKE ?', "%#{params[:filter]}%").uniq, 'view'
     ).first(20)
 
     respond_to do |format|
@@ -309,6 +328,7 @@ class DataFilesController < ApplicationController
       extractor = Seek::Samples::Extractor.new(@data_file, @sample_type)
       @samples = extractor.persist.select(&:persisted?)
       extractor.clear
+      @data_file.copy_assay_associations(@samples, params[:assay_ids]) if params[:assay_ids]
       flash[:notice] = "#{@samples.count} samples extracted successfully"
     else
       SampleDataExtractionJob.new(@data_file, @sample_type, false).queue_job
@@ -344,6 +364,42 @@ class DataFilesController < ApplicationController
 
     respond_to do |format|
       format.html { render partial: 'data_files/sample_extraction_status', locals: { data_file: @data_file } }
+    end
+  end
+
+  def retrieve_nels_sample_metadata
+    begin
+      if @data_file.content_blob.retrieve_from_nels(@oauth_session.access_token)
+        @sample_type = @data_file.reload.possible_sample_types.last
+
+        if @sample_type
+          SampleDataExtractionJob.new(@data_file, @sample_type, false, overwrite: true).queue_job
+
+          respond_to do |format|
+            format.html { redirect_to @data_file }
+          end
+        else
+          flash[:notice] = 'Successfully downloaded sample metadata from NeLS, but could not find a matching sample type.'
+
+          respond_to do |format|
+            format.html { redirect_to @data_file }
+          end
+        end
+      else
+        flash[:error] = 'Could not download sample metadata from NeLS.'
+
+        respond_to do |format|
+          format.html { redirect_to @data_file }
+        end
+      end
+    rescue RestClient::Unauthorized
+      redirect_to @oauth_client.authorize_url
+    rescue RestClient::ResourceNotFound
+      flash[:error] = 'No sample metadata available.'
+
+      respond_to do |format|
+        format.html { redirect_to @data_file }
+      end
     end
   end
 
@@ -397,9 +453,25 @@ class DataFilesController < ApplicationController
   private
 
   def data_file_params
-    params.require(:data_file).permit(:title, :description, { project_ids: [] }, :license, :other_creators,
+    params.require(:data_file).permit(:title, :description, :simulation_data, { project_ids: [] }, :license, :other_creators,
                                       :parent_name, { event_ids: [] },
                                       { special_auth_codes_attributes: [:code, :expiration_date, :id, :_destroy] })
   end
 
+  def oauth_client
+    @oauth_client = Nels::Oauth2::Client.new(Seek::Config.nels_client_id,
+                                             Seek::Config.nels_client_secret,
+                                             nels_oauth_callback_url,
+                                             "data_file_id:#{params[:id]}")
+  end
+
+  def nels_oauth_session
+    @oauth_session = current_user.oauth_sessions.where(provider: 'NeLS').first
+    redirect_to @oauth_client.authorize_url if !@oauth_session || @oauth_session.expired?
+  end
+
+  def rest_client
+    client_class = Nels::Rest::Client
+    @rest_client = client_class.new(@oauth_session.access_token)
+  end
 end

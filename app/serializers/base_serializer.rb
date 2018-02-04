@@ -1,47 +1,128 @@
 class BaseSerializer < SimpleBaseSerializer
   include ApiHelper
+  include PolicyHelper
   include RelatedItemsHelper
+  include Rails.application.routes.url_helpers
 
-  has_many :associated, include_data:true do  #--> add this when everything is serialized.
-    associated_resources(object) # ||  { "data": [] }
+  attribute :policy, if: :show_policy?
+
+  def policy
+    convert_policy object.policy
   end
 
-  # def self_link
-  #   #{base_url}//#{type}/#{id}
-  #   "/#{type}/#{id}"
-  # end
-  #
-  # def base_url
-  #   Seek::Config.site_base_host
-  # end
-  #
-  # #remove link to object/associated --> "#{self_link}/#{format_name(attribute_name)}"
-  # def relationship_self_link(attribute_name)
-  # end
-  #
-  # #remove link to object/related/associated
-  # def relationship_related_link(attribute_name)
-  # end
+  def associated(name)
+    unless @associated[name].blank?
+      items = @associated[name][:items]
+      items = items.sort_by(&:id) unless items.blank?
+      items
+    end
+  end
 
-  #avoid dash-erizing attribute names
+  def people
+    associated('Person')
+   end
+
+  def projects
+    associated('Project')
+  end
+
+  def institutions
+    associated('Institution')
+  end
+
+  def investigations
+    associated('Investigation')
+  end
+
+  def studies
+    associated('Study')
+   end
+
+  def assays
+    associated('Assay')
+  end
+
+  def data_files
+    associated('DataFile')
+  end
+
+  def models
+    associated('Model')
+  end
+
+  def sops
+    associated('Sop')
+  end
+
+  def publications
+    associated('Publication')
+  end
+
+  def presentations
+    associated('Presentation')
+  end
+
+  def events
+    associated('Event')
+  end
+
+  def documents
+    associated('Document')
+  end
+
+  def self_link
+    polymorphic_path(object)
+  end
+
+  def _links
+    { self: self_link }
+  end
+
+  # avoid dash-erizing attribute names
   def format_name(attribute_name)
     attribute_name.to_s
   end
 
-  def meta
-    #content-blob doesn't have timestamps
-    if object.respond_to?('created_at')
-      created = object.created_at
-      updated = object.updated_at
-    end
-    if object.respond_to?('uuid')
-      uuid = object.uuid
-    end
-    {
-        created: created || "",
-        modified: updated || "",
-        uuid: uuid || "",
-        base_url: base_url
-    }
+  def _meta
+    meta = super
+    meta[:uuid] = object.uuid if object.respond_to?('uuid')
+    meta[:base_url] = base_url
+    meta
   end
+
+  def initialize(object, options = {})
+    super
+
+    # access related resources with proper authorization & ignore version subclass
+    @associated = if object.class.to_s.include?('::Version')
+                    associated_resources(object.parent)
+                  else
+                    associated_resources(object)
+                  end
+  end
+
+  def convert_policy policy
+    { 'access' => (access_type_key policy.access_type),
+      'permissions' => (permits policy)}
+  end
+
+  def permits policy
+    result = []
+    policy.permissions.each do |p|
+      result.append ({'resource_type' => p.contributor_type.downcase.pluralize,
+                      'resource_id' => p.contributor_id.to_s,
+                      'access' => (access_type_key p.access_type) } )
+    end
+    return result
+  end
+
+  def show_policy?
+    respond_to_manage = object.respond_to?('can_manage?')
+    respond_to_policy = object.respond_to?('policy')
+    current_user = User.current_user
+    can_manage = object.can_manage?(current_user)
+    return respond_to_policy && respond_to_manage && can_manage
+  end
+
+
 end

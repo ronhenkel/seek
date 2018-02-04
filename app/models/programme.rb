@@ -1,5 +1,6 @@
 class Programme < ActiveRecord::Base
   include Seek::Taggable
+  include Seek::Rdf::RdfGeneration
 
   attr_accessor :administrator_ids
 
@@ -36,7 +37,7 @@ class Programme < ActiveRecord::Base
   scope :not_activated, -> { where(is_activated: false) }
   scope :rejected, -> { where('is_activated = ? AND activation_rejection_reason IS NOT NULL', false) }
 
-  def investigations(include_clause = :investigations)
+   def investigations(include_clause = :investigations)
     projects.includes(include_clause).collect(&:investigations).flatten.uniq
   end
 
@@ -48,10 +49,18 @@ class Programme < ActiveRecord::Base
     studies(include_clause).collect(&:assays).flatten.uniq
   end
 
-  %i[data_files models sops presentations events publications].each do |type|
+  %i[data_files documents models sops presentations events publications].each do |type|
     define_method(type) do
       projects.includes(type).collect(&type).flatten.uniq
     end
+  end
+
+  def organisms
+    projects.collect(&:organisms).flatten.uniq
+  end
+
+  def assets
+    (data_files+models+sops+presentations+events+publications+documents).uniq.compact
   end
 
   def can_be_edited_by?(user)
