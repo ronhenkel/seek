@@ -9,7 +9,7 @@ Underpinning SEEK is the ISA infrastructure, a standard format for describing ho
 
 SEEK is incorporating semantic technology allowing sophisticated queries over the data, yet without getting in the way of your users.
 
-For an example of SEEK please visit our [Demo](http://demo.seek4science.org/).
+For an example of SEEK please visit the [Demo](http://demo.seek4science.org/).
 
 To see SEEK being used for real science, as part of [FAIRDOM](http://fair-dom.org) please visit [FAIRDOM SEEK](http://fairdomhub.org)
 
