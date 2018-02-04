@@ -77,7 +77,7 @@ module Seek
     class MasymosSearchResult < Struct.new(:authors, :abstract, :title, :published_date, :publication_id, :publication_title, :model_id, :last_modification_date)
       include Seek::ExternalSearchResult
 
-      alias_attribute :id, :model_id
+      alias_attribute :id, :model_id 
 
 #      def initialize(masymos_search_result)
       def initialize(modelName, modelID, documentURI, filename)
